@@ -2,13 +2,14 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from traceback import format_exc
 from typing import Dict
+from sqlalchemy.orm import Session
 
 from sqlitedict import SqliteDict
 
 from .binance_api_manager import BinanceAPIManager
 from .binance_stream_manager import BinanceOrder
+from .database_warmup import WarmUpDatabase, WarmUpManager
 from .config import Config
-from .database import Database
 from .logger import Logger
 from .models import Coin, Pair
 from .strategies import get_strategy
@@ -16,11 +17,11 @@ from .strategies import get_strategy
 cache = SqliteDict("data/backtest_cache.db")
 
 
-class MockBinanceManager(BinanceAPIManager):
+class MockBinanceManager(WarmUpManager):
     def __init__(
         self,
         config: Config,
-        db: Database,
+        db: WarmUpDatabase,
         logger: Logger,
         start_date: datetime = None,
         start_balances: Dict[str, float] = None,
@@ -37,7 +38,7 @@ class MockBinanceManager(BinanceAPIManager):
         self.datetime += timedelta(minutes=interval)
 
     def get_fee(self, origin_coin: Coin, target_coin: Coin, selling: bool):
-        return 0.0075
+        return 0.00075
 
     def get_ticker_price(self, ticker_symbol: str):
         """
@@ -133,7 +134,7 @@ class MockBinanceManager(BinanceAPIManager):
         return total
 
 
-class MockDatabase(Database):
+class MockDatabase(WarmUpDatabase):
     def __init__(self, logger: Logger, config: Config):
         super().__init__(logger, config, "sqlite:///")
 
@@ -196,8 +197,40 @@ def backtest(
             manager.increment(interval)
             if n % yield_interval == 0:
                 yield manager
+            if n == 120:
+                db.set_coins_to_warmup(config.SUPPORTED_COIN_LIST, ['STRAX', 'LTC', 'ETH'])
+                initialize_trade_thresholds(db, manager, config, logger)
+
+                # the additon right after the warmup is save the bot will not do any crazy jumps.
+                config.SUPPORTED_COIN_LIST.append('LTC')
+                config.SUPPORTED_COIN_LIST.append('ETH')
+                db.set_coins(config.SUPPORTED_COIN_LIST)
+                trader.initialize()
+            # if we wait some trades after we warmuped the db the bot will jump immediately to the fresh added coin and do wild jump.
+            if n == 1200:
+                config.SUPPORTED_COIN_LIST.append('STRAX')
+                db.set_coins(config.SUPPORTED_COIN_LIST)
+                trader.initialize()
             n += 1
     except KeyboardInterrupt:
         pass
     cache.close()
     return manager
+
+def initialize_trade_thresholds(db: WarmUpDatabase, manager: WarmUpManager, config: Config, logger):
+        """
+        Initialize the buying threshold of all the coins for trading between them
+        """
+        session: Session
+        with db.db_session() as session:
+            for pair in session.query(Pair).filter(Pair.ratio.is_(None)).all():
+                logger.info(f"Initializing {pair.from_coin} vs {pair.to_coin}")
+                from_coin_price = manager.get_ticker_price(pair.from_coin + config.BRIDGE)
+                if from_coin_price is None:                   
+                    continue
+
+                to_coin_price = manager.get_ticker_price(pair.to_coin + config.BRIDGE)
+                if to_coin_price is None:                   
+                    continue
+
+                pair.ratio = from_coin_price / to_coin_price
