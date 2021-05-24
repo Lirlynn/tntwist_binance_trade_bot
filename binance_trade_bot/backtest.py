@@ -1,7 +1,9 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from random import random
 from traceback import format_exc
 from typing import Dict
+from sqlalchemy.sql.expression import false
 
 from sqlitedict import SqliteDict
 
@@ -29,6 +31,7 @@ class MockBinanceManager(BinanceAPIManager):
         self.config = config
         self.datetime = start_date or datetime(2021, 1, 1)
         self.balances = start_balances or {config.BRIDGE.symbol: 100}
+        self.failed_buy_order = False
 
     def setup_websockets(self):
         pass  # No websockets are needed for backtesting
@@ -37,7 +40,7 @@ class MockBinanceManager(BinanceAPIManager):
         self.datetime += timedelta(minutes=interval)
 
     def get_fee(self, origin_coin: Coin, target_coin: Coin, selling: bool):
-        return 0.0075
+        return 0.00075
 
     def get_ticker_price(self, ticker_symbol: str):
         """
@@ -72,6 +75,10 @@ class MockBinanceManager(BinanceAPIManager):
         origin_symbol = origin_coin.symbol
         target_symbol = target_coin.symbol
 
+        if(random() < 0.1):
+            self.failed_buy_order = True;
+            return None
+
         target_balance = self.get_currency_balance(target_symbol)
         from_coin_price = self.get_ticker_price(origin_symbol + target_symbol)
 
@@ -85,6 +92,7 @@ class MockBinanceManager(BinanceAPIManager):
             f"Bought {origin_symbol}, balance now: {self.balances[origin_symbol]} - bridge: "
             f"{self.balances[target_symbol]}"
         )
+        self.failed_buy_order = False
 
         event = defaultdict(
             lambda: None,
@@ -97,7 +105,7 @@ class MockBinanceManager(BinanceAPIManager):
 
     def sell_alt(self, origin_coin: Coin, target_coin: Coin, sell_price: float):
         origin_symbol = origin_coin.symbol
-        target_symbol = target_coin.symbol
+        target_symbol = target_coin.symbol       
 
         origin_balance = self.get_currency_balance(origin_symbol)
         from_coin_price = self.get_ticker_price(origin_symbol + target_symbol)
