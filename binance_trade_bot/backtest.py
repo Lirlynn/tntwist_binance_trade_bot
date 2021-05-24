@@ -31,7 +31,6 @@ class MockBinanceManager(BinanceAPIManager):
         self.config = config
         self.datetime = start_date or datetime(2021, 1, 1)
         self.balances = start_balances or {config.BRIDGE.symbol: 100}
-        self.failed_buy_order = False
 
     def setup_websockets(self):
         pass  # No websockets are needed for backtesting
@@ -75,8 +74,8 @@ class MockBinanceManager(BinanceAPIManager):
         origin_symbol = origin_coin.symbol
         target_symbol = target_coin.symbol
 
+        # simulate failed buy order
         if(random() < 0.1):
-            self.failed_buy_order = True;
             return None
 
         target_balance = self.get_currency_balance(target_symbol)
