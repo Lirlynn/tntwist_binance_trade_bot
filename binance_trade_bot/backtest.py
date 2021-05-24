@@ -198,17 +198,29 @@ def backtest(
             if n % yield_interval == 0:
                 yield manager
             if n == 120:
-                db.set_coins_to_warmup(config.SUPPORTED_COIN_LIST, ['STRAX', 'LTC', 'ETH'])
+                db.set_coins_to_warmup(config.SUPPORTED_COIN_LIST, ['STRAX', 'LTC', 'ETH', 'COS'])
+                logger.log(f"{manager.datetime} warming up STRAX, LTC, ETH and COS")
                 initialize_trade_thresholds(db, manager, config, logger)
 
-                # the additon right after the warmup is save the bot will not do any crazy jumps.
+                # the additon right after the warmup may will lead to crazy jumps
                 config.SUPPORTED_COIN_LIST.append('LTC')
-                config.SUPPORTED_COIN_LIST.append('ETH')
+                logger.log(f"{manager.datetime} adding LTC to supported coin list")
                 db.set_coins(config.SUPPORTED_COIN_LIST)
                 trader.initialize()
-            # if we wait some trades after we warmuped the db the bot will jump immediately to the fresh added coin and do wild jump.
-            if n == 1200:
+            # if we wait some trades after we warmuped the db the bot will not jump immediately to the fresh added coin and do wild jump.
+            if n == 240:
                 config.SUPPORTED_COIN_LIST.append('STRAX')
+                logger.log(f"{manager.datetime} adding STRAX to supported coin list")
+                db.set_coins(config.SUPPORTED_COIN_LIST)
+                trader.initialize()
+            if n == 360:
+                config.SUPPORTED_COIN_LIST.append('COS')
+                logger.log(f"{manager.datetime} adding COS to supported coin list")
+                db.set_coins(config.SUPPORTED_COIN_LIST)
+                trader.initialize()
+            if n == 480:
+                config.SUPPORTED_COIN_LIST.append('ETH')
+                logger.log(f"{manager.datetime} adding ETH to supported coin list")
                 db.set_coins(config.SUPPORTED_COIN_LIST)
                 trader.initialize()
             n += 1
