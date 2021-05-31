@@ -8,6 +8,7 @@ from sqlalchemy.sql.expression import and_
 from binance_trade_bot.auto_trader import AutoTrader
 from binance_trade_bot.database import Pair, Trade, Coin
 
+history = []
 
 class Strategy(AutoTrader):
     def initialize(self):
@@ -29,9 +30,9 @@ class Strategy(AutoTrader):
                 allowed_idle_time = last_trade.datetime + timedelta(hours=max_idle_timeout)
                 base_time: datetime = self.manager.now()
                 if base_time >= allowed_idle_time and base_time >= self.reinit_threshold:
-                    self.logger.info(f"Last trade was before {max_idle_timeout} hours! Going to reinit ratios.")
+                    self.logger.debug(f"Last trade was before {max_idle_timeout} hours! Going to reinit ratios.")
                     self.re_initialize_trade_thresholds()
-                    self.logger.info("Finished reiniting the ratios.")
+                    self.logger.debug("Finished reiniting the ratios.")
                     self.reinit_threshold = base_time + timedelta(hours=1)
                 
 
@@ -41,16 +42,15 @@ class Strategy(AutoTrader):
         current_coin = self.db.get_current_coin()
         # Display on the console, the current coin+Bridge, so users can see *some* activity and not think the bot has
         # stopped. Not logging though to reduce log size.
-        print(
+        self.logger.debug(
             f"{self.manager.now()} - CONSOLE - INFO - I am scouting the best trades. "
-            f"Current coin: {current_coin + self.config.BRIDGE} ",
-            end="\r",
+            f"Current coin: {current_coin + self.config.BRIDGE} "
         )
 
         current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
 
         if current_coin_price is None:
-            self.logger.info("Skipping scouting... current coin {} not found".format(current_coin + self.config.BRIDGE))
+            self.logger.debug("Skipping scouting... current coin {} not found".format(current_coin + self.config.BRIDGE))
             return
 
         self._jump_to_best_coin(current_coin, current_coin_price)
@@ -95,7 +95,18 @@ class Strategy(AutoTrader):
         Re-initialize all the thresholds ( hard reset - as deleting db )
         """
         #updates all ratios
-        print('************INITIALIZING RATIOS**********')
+        print('******TIMEOUT - RATIOS REINITIALIZED****')
+        btc_value = round(self.manager.collate_coins("BTC"), 7)
+        bridge_value = self.manager.collate_coins(self.manager.config.BRIDGE.symbol)
+        btc_fees_value = self.manager.collate_fees("BTC")
+        bridge_fees_value = self.manager.collate_fees(self.manager.config.BRIDGE.symbol)
+        trades = self.manager.trades
+        history.append((btc_value, bridge_value, trades, btc_fees_value, bridge_fees_value))
+        btc_diff = round((btc_value - history[0][0]) / history[0][0] * 100, 2)
+        bridge_diff = round((bridge_value - history[0][1]) / history[0][1] * 100, 2)
+        print("TIME:", self.manager.datetime, " BTC VALUE:", btc_value, f"({btc_diff}%)", f" {self.manager.config.BRIDGE.symbol} VALUE:", bridge_value, f"({bridge_diff}%)")
+        print('****************************************')
+
         session: Session
         with self.db.db_session() as session:
             c1 = aliased(Coin)
@@ -106,11 +117,11 @@ class Strategy(AutoTrader):
                 all():
                 if not pair.from_coin.enabled or not pair.to_coin.enabled:
                     continue
-                self.logger.info(f"Initializing {pair.from_coin} vs {pair.to_coin}", False)
+                self.logger.debug(f"Initializing {pair.from_coin} vs {pair.to_coin}", False)
 
                 from_coin_price = self.manager.get_sell_price(pair.from_coin + self.config.BRIDGE)
                 if from_coin_price is None:
-                    self.logger.info(
+                    self.logger.debug(
                         "Skipping initializing {}, symbol not found".format(pair.from_coin + self.config.BRIDGE),
                         False
                     )
@@ -118,7 +129,7 @@ class Strategy(AutoTrader):
 
                 to_coin_price = self.manager.get_buy_price(pair.to_coin + self.config.BRIDGE)
                 if to_coin_price is None:
-                    self.logger.info(
+                    self.logger.debug(
                         "Skipping initializing {}, symbol not found".format(pair.to_coin + self.config.BRIDGE),
                         False
                     )
