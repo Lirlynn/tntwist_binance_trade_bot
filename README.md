@@ -62,7 +62,7 @@ Create a .cfg file named `user.cfg` based off `.user.cfg.example`, then add your
 -   **buy_order_type** - Controls the type of placed buy orders, types available: market, limit (default=limit)
 -   **sell_order_type** - Controls the type of placed sell orders, types available: market, limit (default=market)
 -   **buy_max_price_change/sell_max_price_change** - Controls how much price change in decimal percentage is accepted between calculation of ratios and trading.
--   **price_type** - Controls the type of prices used by the bot, types available: orderbook, ticker (default=orderbook)
+-   **price_type** - Controls the type of prices used by the bot, types available: orderbook, ticker (default=orderbook). Please note that using the orderbook prices increase the CPU usage.
     **max_idle_hours** - Controls the amount of hours for reseting the ratios when the bot has not traded 
 
 #### Environment Variables
@@ -141,21 +141,21 @@ After the execution you should wait one or two trades of the bot before adding a
 By running the script without parameters, it will warm up the bots default database with all available coins for the bridge.
 
 ```shell
-pyhton3 database_warmup.py
+python3 database_warmup.py
 ```
 
 If you want to specify a separate db file you can use the -d or --dbfile parameter.
 If not provided, the script will use the bots default db file.
 
 ```shell
-pyhton3 database_warmup.py -d data/warmup.db
+python3 database_warmup.py -d data/warmup.db
 ```
 
 You can also specify the coins you want to warmup with the -c or --coinlist parameter.
 If not provided the script will warmup all coins available for the bridge.
 
 ```shell
-pyhton3 database_warmup.py -c 'ADA BTC ETH LTC'
+python3 database_warmup.py -c 'ADA BTC ETH LTC'
 ```
 
 ## Developing
