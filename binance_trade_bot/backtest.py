@@ -85,6 +85,8 @@ class MockBinanceManager(BinanceAPIManager):
         self.balances = start_balances or {config.BRIDGE.symbol: 100}
         self.ignored_symbols = ["BTTBTC"]
         self.trades = 0
+        self.positve_coin_jumps = 0
+        self.negative_coin_jumps = 0
         self.paid_fees = {}
         self.coins_trades= {}
 
@@ -203,10 +205,23 @@ class MockBinanceManager(BinanceAPIManager):
         if origin_symbol not in self.coins_trades.keys():
             self.coins_trades[origin_symbol] = []
         self.coins_trades[origin_symbol].append(self.balances[origin_symbol])
+
+        diff = self.get_diff(origin_symbol)
+        diff_str = ""
+        if diff is None:
+            diff_str = "None"
+        else:
+            diff_str = f"{diff} %"
+
         self.logger.info(
-            f"{self.datetime} Bought {origin_symbol} {round(self.balances[origin_symbol], 4)} {self.get_diff(origin_symbol)}"
+            f"{self.datetime} Bought {origin_symbol} {round(self.balances[origin_symbol], 4)} {diff_str}"
         )
-            
+        
+        if diff is not None:
+            if diff > 0.0:
+                self.positve_coin_jumps +=1
+            else:
+                self.negative_coin_jumps += 1
 
         event = defaultdict(
             lambda: None,
@@ -279,8 +294,8 @@ class MockBinanceManager(BinanceAPIManager):
     
     def get_diff(self, symbol):
         if len(self.coins_trades[symbol]) == 1:
-            return "(None)"
-        return f"({round(((self.coins_trades[symbol][-1] - self.coins_trades[symbol][-2]) /self.coins_trades[symbol][-1] * 100 ),2)}%)"
+            return None
+        return round(((self.coins_trades[symbol][-1] - self.coins_trades[symbol][-2]) /self.coins_trades[symbol][-1] * 100 ),2)
 class MockDatabase(Database):
     def __init__(self, logger: Logger, config: Config):
         super().__init__(logger, config, "sqlite:///", True)

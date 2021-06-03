@@ -16,6 +16,8 @@ if __name__ == "__main__":
     print("------")
     print("TIME:", manager.datetime)
     print("TRADES:", trades)
+    print("POSITIVE COIN JUMPS:", manager.positve_coin_jumps)
+    print("NEVATIVE COIN JUMPS:", manager.negative_coin_jumps)
     #print("PAID FEES:", manager.paid_fees)
     #print("BTC FEES VALUE:", btc_fees_value)
     print(f"{manager.config.BRIDGE.symbol} FEES VALUE:", bridge_fees_value)
