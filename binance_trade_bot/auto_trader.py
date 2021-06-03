@@ -89,18 +89,18 @@ class AutoTrader:
                 if pair.from_coin.enabled and pair.to_coin.enabled:
                     grouped_pairs[pair.from_coin.symbol].append(pair)
             for from_coin_symbol, group in grouped_pairs.items():
-                self.logger.info(f"Initializing {from_coin_symbol} vs [{', '.join([p.to_coin.symbol for p in group])}]")
+                self.logger.debug(f"Initializing {from_coin_symbol} vs [{', '.join([p.to_coin.symbol for p in group])}]")
                 for pair in group:
                     from_coin_price = self.manager.get_sell_price(pair.from_coin + self.config.BRIDGE)
                     if from_coin_price is None:
-                        self.logger.info(
+                        self.logger.debug(
                             "Skipping initializing {}, symbol not found".format(pair.from_coin + self.config.BRIDGE)
                         )
                         continue
 
                     to_coin_price = self.manager.get_buy_price(pair.to_coin + self.config.BRIDGE)
                     if to_coin_price is None:
-                        self.logger.info(
+                        self.logger.debug(
                             "Skipping initializing {}, symbol not found".format(pair.to_coin + self.config.BRIDGE)
                         )
                         continue
@@ -158,7 +158,7 @@ class AutoTrader:
         # if we have any viable options, pick the one with the biggest ratio
         if ratio_dict:
             best_pair = max(ratio_dict, key=ratio_dict.get)
-            self.logger.info(f"Will be jumping from {coin} to {best_pair.to_coin_id}")
+            self.logger.debug(f"Will be jumping from {coin} to {best_pair.to_coin_id}")
             self.transaction_through_bridge(best_pair, coin_price, prices[best_pair.to_coin_id])
 
     def bridge_scout(self):

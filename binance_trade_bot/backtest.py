@@ -23,6 +23,7 @@ from .strategies import get_strategy
 cache = Cache("data", size_limit=int(1e11))
 
 
+
 def download(link):
     r = requests.get(link, headers={
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0',
@@ -85,6 +86,7 @@ class MockBinanceManager(BinanceAPIManager):
         self.ignored_symbols = ["BTTBTC"]
         self.trades = 0
         self.paid_fees = {}
+        self.coins_trades= {}
 
     def now(self):
         return self.datetime
@@ -198,10 +200,13 @@ class MockBinanceManager(BinanceAPIManager):
         if origin_symbol not in self.paid_fees.keys():
             self.paid_fees[origin_symbol] = 0
         self.paid_fees[origin_symbol] += fee
-        self.logger.info(
-            f"Bought {origin_symbol}, balance now: {self.balances[origin_symbol]} - bridge: "
-            f"{self.balances[target_symbol]}"
+        if origin_symbol not in self.coins_trades.keys():
+            self.coins_trades[origin_symbol] = []
+        self.coins_trades[origin_symbol].append(self.balances[origin_symbol])
+        print(
+            f"{self.datetime} Bought {origin_symbol} {round(self.balances[origin_symbol], 4)} {self.get_diff(origin_symbol)}"
         )
+            
 
         event = defaultdict(
             lambda: None,
@@ -241,10 +246,9 @@ class MockBinanceManager(BinanceAPIManager):
             self.paid_fees[target_symbol] = 0
         self.paid_fees[target_symbol] += fee
         self.balances[origin_symbol] -= order_quantity
-        self.logger.info(
-            f"Sold {origin_symbol}, balance now: {self.balances[origin_symbol]} - bridge: "
-            f"{self.balances[target_symbol]}"
-        )
+        #self.logger.info(
+        #    f"Sold: {origin_symbol} = {order_quantity}"
+        #)
         
         self.trades += 1
         return {"price": from_coin_price}
@@ -271,8 +275,12 @@ class MockBinanceManager(BinanceAPIManager):
                 if price is None:
                     continue
                 total += price * balance
-        return total 
-
+        return total
+    
+    def get_diff(self, symbol):
+        if len(self.coins_trades[symbol]) == 1:
+            return "(None)"
+        return f"({round(((self.coins_trades[symbol][-1] - self.coins_trades[symbol][-2]) /self.coins_trades[symbol][-1] * 100 ),2)}%)"
 class MockDatabase(Database):
     def __init__(self, logger: Logger, config: Config):
         super().__init__(logger, config, "sqlite:///", True)
@@ -312,7 +320,7 @@ def backtest(
     db.set_coins(config.SUPPORTED_COIN_LIST)
     manager = MockBinanceManager(config, db, logger, start_date, start_balances)
 
-    starting_coin = db.get_coin(starting_coin or config.SUPPORTED_COIN_LIST[0])
+    starting_coin = db.get_coin(starting_coin or config.CURRENT_COIN_SYMBOL or config.SUPPORTED_COIN_LIST[0])
     if manager.get_currency_balance(starting_coin.symbol) == 0:
         manager.buy_alt(starting_coin, config.BRIDGE, 0.0)  # doesn't matter mocking manager don't look at fixed price
     db.set_current_coin(starting_coin)
