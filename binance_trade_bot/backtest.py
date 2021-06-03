@@ -203,7 +203,7 @@ class MockBinanceManager(BinanceAPIManager):
         if origin_symbol not in self.coins_trades.keys():
             self.coins_trades[origin_symbol] = []
         self.coins_trades[origin_symbol].append(self.balances[origin_symbol])
-        print(
+        self.logger.info(
             f"{self.datetime} Bought {origin_symbol} {round(self.balances[origin_symbol], 4)} {self.get_diff(origin_symbol)}"
         )
             
