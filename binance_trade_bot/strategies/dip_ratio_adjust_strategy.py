@@ -59,32 +59,35 @@ class Strategy(AutoTrader):
             self.logger.info("Skipping scouting... current coin {} not found".format(current_coin + self.config.BRIDGE))
             return
 
-        if current_coin_symbol_str in self.data_frames:
-            if self.isBacktest:
-                idx=self.manager.datetime - (self.manager.datetime - datetime.min) % timedelta(minutes=15)
-                df = self.data_frames[current_coin_symbol_str]['df'].loc[(self.data_frames[current_coin_symbol_str]['df']['date'] == idx)]
-                if df.empty:                    
-                    self.data_frames[current_coin_symbol_str]['df'] = self.get_dataframe(current_coin_symbol_str + self.config.BRIDGE.symbol)
-                    self.data_frames[current_coin_symbol_str]['ts'] = self.manager.now()
+        try:
+            if current_coin_symbol_str in self.data_frames:
+                if self.isBacktest:
+                    idx=self.manager.datetime - (self.manager.datetime - datetime.min) % timedelta(minutes=15)
                     df = self.data_frames[current_coin_symbol_str]['df'].loc[(self.data_frames[current_coin_symbol_str]['df']['date'] == idx)]
-            else:
-                self.keep_dataframes_updated()
-                df = self.data_frames[current_coin_symbol_str]['df'].iloc[-1:]
-            if not df.empty:                
-                current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)                
-                is_not_on_bridge = self.is_on_bridge() != True
-                if is_not_on_bridge and type(df.values[0][-1]) == bool and df.values[0][-1]:
-                    self.logger.info(f"[{self.manager.now()}] detected dip, selling coin waiting for rise")
+                    if df.empty:
+                        self.data_frames[current_coin_symbol_str]['df'] = self.get_dataframe(current_coin_symbol_str + self.config.BRIDGE.symbol)
+                        self.data_frames[current_coin_symbol_str]['ts'] = self.manager.now()
+                        df = self.data_frames[current_coin_symbol_str]['df'].loc[(self.data_frames[current_coin_symbol_str]['df']['date'] == idx)]
+                else:
+                    self.keep_dataframes_updated()
+                    df = self.data_frames[current_coin_symbol_str]['df'].iloc[-1:]
+                if not df.empty:
                     current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
-                    if self.manager.sell_alt(current_coin, self.config.BRIDGE, current_coin_price):
-                        self.last_price[current_coin_symbol_str] = current_coin_price
-                        self.logger.info("sold coin waiting")
-                elif not is_not_on_bridge and type(df.values[0][-2])==bool and df.values[0][-2] and current_coin_symbol_str in self.last_price and current_coin_price < self.last_price[current_coin_symbol_str]:
-                    self.logger.info(f"[{self.manager.now()}] detected dip, buying coin waiting for drop")
-                    current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
-                    if self.manager.buy_alt(current_coin, self.config.BRIDGE, current_coin_price):
-                        self.last_price[current_coin_symbol_str] = current_coin_price * (self.manager.get_fee(current_coin,self.config.BRIDGE,False) * 2 + 1)
-                        self.logger.info("bought coin back")
+                    is_not_on_bridge = self.is_on_bridge() != True
+                    if is_not_on_bridge and type(df.values[0][-1]) == bool and df.values[0][-1]:
+                        self.logger.info(f"[{self.manager.now()}] detected dip, selling coin waiting for rise")
+                        current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
+                        if self.manager.sell_alt(current_coin, self.config.BRIDGE, current_coin_price):
+                            self.last_price[current_coin_symbol_str] = current_coin_price
+                            self.logger.info("sold coin waiting")
+                    elif not is_not_on_bridge and type(df.values[0][-2])==bool and df.values[0][-2] and current_coin_symbol_str in self.last_price and current_coin_price < self.last_price[current_coin_symbol_str]:
+                        self.logger.info(f"[{self.manager.now()}] detected dip, buying coin waiting for drop")
+                        current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
+                        if self.manager.buy_alt(current_coin, self.config.BRIDGE, current_coin_price):
+                            self.last_price[current_coin_symbol_str] = current_coin_price * (self.manager.get_fee(current_coin,self.config.BRIDGE,False) * 2 + 1)
+                            self.logger.info("bought coin back")
+        except Exception as e:
+            self.logger.info(f"Dip detection failed, due to an error. The main logic of the bot will continue. Error: {e}")
 
         self._jump_to_best_coin(current_coin, current_coin_price)
 
