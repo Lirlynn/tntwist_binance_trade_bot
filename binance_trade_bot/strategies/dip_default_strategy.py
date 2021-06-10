@@ -56,7 +56,7 @@ class Strategy(AutoTrader):
                         df = self.data_frames[current_coin_symbol_str]['df'].loc[(self.data_frames[current_coin_symbol_str]['df']['date'] == idx)]
                 else:
                     self.keep_dataframes_updated()
-                    df = self.data_frames[current_coin_symbol_str]['df'].iloc[-1:]
+                    df = self.data_frames[current_coin_symbol_str]['df'].loc[-1:]
                 if not df.empty:
                     current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
                     is_not_on_bridge = self.is_on_bridge() != True
