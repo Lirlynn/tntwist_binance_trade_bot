@@ -228,7 +228,8 @@ class Strategy(AutoTrader):
 
         return True
 
-    def set_last_price(self, coin_symbol):
+    def set_last_price(self, coin: Coin):
+        coin_symbol = coin.symbol
         if self.isBacktest:
             self.last_price[coin_symbol]=0
             return
@@ -237,13 +238,13 @@ class Strategy(AutoTrader):
         if len(orders)>=1:
             is_not_sell = orders[0]['side'] != 'SELL'
             if is_not_sell:
-                self.last_price[coin_symbol]=float(orders[0]['price'])*(self.manager.get_fee(coin_symbol,self.config.BRIDGE.symbol,False)*2+1)
+                self.last_price[coin_symbol]=float(orders[0]['price'])*(self.manager.get_fee(coin,self.config.BRIDGE,False)*2+1)
             else:
                 self.last_price[coin_symbol]=float(orders[0]['price'])
 
     def add_dataframe_for_all(self):        
-        current_coin_symbol = self.db.get_current_coin().symbol
-        self.set_last_price(current_coin_symbol)       
+        curent_coin = self.db.get_current_coin()
+        self.set_last_price(curent_coin)       
         for coin in self.config.SUPPORTED_COIN_LIST:
                 if coin not in self.data_frames:
                     self.data_frames[coin]={}
