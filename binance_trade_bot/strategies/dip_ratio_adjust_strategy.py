@@ -71,14 +71,17 @@ class Strategy(AutoTrader):
                 self.keep_dataframes_updated()
                 df = self.data_frames[current_coin_symbol_str]['df'].iloc[-1:]
             if not df.empty:                
+                current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)                
                 is_not_on_bridge = self.is_on_bridge() != True
                 if is_not_on_bridge and type(df.values[0][-1]) == bool and df.values[0][-1]:
                     self.logger.info(f"[{self.manager.now()}] detected dip, selling coin waiting for rise")
+                    current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
                     if self.manager.sell_alt(current_coin, self.config.BRIDGE, current_coin_price):
                         self.last_price[current_coin_symbol_str] = current_coin_price
                         self.logger.info("sold coin waiting")
                 elif not is_not_on_bridge and type(df.values[0][-2])==bool and df.values[0][-2] and current_coin_symbol_str in self.last_price and current_coin_price < self.last_price[current_coin_symbol_str]:
                     self.logger.info(f"[{self.manager.now()}] detected dip, buying coin waiting for drop")
+                    current_coin_price = self.manager.get_sell_price(current_coin + self.config.BRIDGE)
                     if self.manager.buy_alt(current_coin, self.config.BRIDGE, current_coin_price):
                         self.last_price[current_coin_symbol_str] = current_coin_price * (self.manager.get_fee(current_coin,self.config.BRIDGE,False) * 2 + 1)
                         self.logger.info("bought coin back")
