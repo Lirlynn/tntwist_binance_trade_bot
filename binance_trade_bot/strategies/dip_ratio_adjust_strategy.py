@@ -234,7 +234,7 @@ class Strategy(AutoTrader):
         if len(orders)>=1:
             is_not_sell = orders[0]['side'] != 'SELL'
             if is_not_sell:
-                self.last_price[coin_symbol]=float(orders[0]['price'])*(self.manager.get_fee(coin_symbol,self.config.BRIDGE,False)*2+1)
+                self.last_price[coin_symbol]=float(orders[0]['price'])*(self.manager.get_fee(coin_symbol,self.config.BRIDGE.symbol,False)*2+1)
             else:
                 self.last_price[coin_symbol]=float(orders[0]['price'])
 
