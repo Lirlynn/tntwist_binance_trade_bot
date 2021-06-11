@@ -217,7 +217,7 @@ class MockBinanceManager(BinanceAPIManager):
             diff_str = f"{diff} %"
 
         self.logger.info(
-            f"{self.datetime} Bought {origin_symbol} {round(self.balances[origin_symbol], 4)} {diff_str}"
+            f"{self.datetime} Bought {origin_symbol} {round(self.balances[origin_symbol], 4)} for {from_coin_price} {target_symbol}. Gain: {diff_str}"
         )
         
         if diff is not None:
@@ -267,6 +267,10 @@ class MockBinanceManager(BinanceAPIManager):
         #self.logger.info(
         #    f"Sold: {origin_symbol} = {order_quantity}"
         #)
+
+        self.logger.info(
+            f"{self.datetime} Sold {origin_symbol} for {from_coin_price} {target_symbol}"
+        )
         
         self.trades += 1
         return {"price": from_coin_price}
