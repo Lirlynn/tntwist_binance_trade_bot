@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from traceback import format_exc
 from typing import Dict
 from sqlalchemy.orm.session import Session
@@ -91,7 +91,7 @@ class MockBinanceManager(BinanceAPIManager):
         self.coins_trades= {}
 
     def now(self):
-        return self.datetime
+        return self.datetime.replace(tzinfo=timezone.utc)
 
     def setup_websockets(self):
         pass  # No websockets are needed for backtesting
