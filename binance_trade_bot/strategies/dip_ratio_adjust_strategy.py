@@ -18,6 +18,10 @@ from binance_trade_bot.database import Pair, Coin
 
 class Strategy(AutoTrader):
     def initialize(self):
+        if self.config.ACCEPT_LOSSES != True:
+            self.logger.error("You need accept losses by setting accept_losses=true in the user.cfg or setting the enviroment variable ACCEPT_LOSSES to true in order to use this strategy!")
+            raise Exception()
+
         super().initialize()
         self.isBacktest = type(self.manager).__name__=='MockBinanceManager'
         
