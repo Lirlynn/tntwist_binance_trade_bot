@@ -136,6 +136,10 @@ class AutoTrader:
                 # )
                 continue
 
+            if pair.ratio is None:
+                self.initialize_trade_thresholds()
+                continue
+
             scout_logs.append(LogScout(pair, pair.ratio, coin_price, optional_coin_price))
 
             # Obtain (current coin)/(optional coin)
