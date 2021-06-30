@@ -20,7 +20,7 @@ from .logger import Logger
 from .models import Coin, Pair, Trade, TradeState
 from .strategies import get_strategy
 
-cache = Cache("data", size_limit=int(1e11))
+cache = Cache("data", size_limit=int(1e12))
 
 
 
