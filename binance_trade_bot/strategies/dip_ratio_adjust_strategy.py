@@ -269,10 +269,19 @@ class Strategy(AutoTrader):
         if ticker_symbol is None:
             ticker_symbol=str(self.db.get_current_coin().symbol)+self.config.BRIDGE.symbol        
 
-        if not self.isBacktest:
-            datas = json.loads(requests.get(f'https://www.binance.com/api/v1/klines?interval={interval}&limit=1000&symbol={ticker_symbol}',headers={'user-agent':'Binance/2.30.0 (com.czzhao.binance; build:8; iOS 14.5.1) Alamofire/2.30.0'}).content)
-        else:          
-            datas = json.loads(requests.get(f'https://www.binance.com/api/v1/klines?interval={interval}&limit=1000&symbol={ticker_symbol}&startTime={int(mktime(self.manager.now().timetuple())*1000)}',headers={'user-agent':'Binance/2.30.0 (com.czzhao.binance; build:8; iOS 14.5.1) Alamofire/2.30.0'}).content)
+        datas = None
+        retries = 0
+        while datas is None and retries < 5:
+            try:
+                if not self.isBacktest:
+                    datas = json.loads(requests.get(f'https://www.binance.com/api/v1/klines?interval={interval}&limit=1000&symbol={ticker_symbol}',headers={'user-agent':'Binance/2.30.0 (com.czzhao.binance; build:8; iOS 14.5.1) Alamofire/2.30.0'}).content)
+                else:          
+                    datas = json.loads(requests.get(f'https://www.binance.com/api/v1/klines?interval={interval}&limit=1000&symbol={ticker_symbol}&startTime={int(mktime(self.manager.now().timetuple())*1000)}',headers={'user-agent':'Binance/2.30.0 (com.czzhao.binance; build:8; iOS 14.5.1) Alamofire/2.30.0'}).content)
+            except ConnectionError:
+                retries += 1
+
+        if datas is None:
+            raise Exception(f"Could not load historic {interval} klines for {ticker_symbol}", False)
 
         data=[]
         for result in datas:
