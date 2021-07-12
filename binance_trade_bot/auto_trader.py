@@ -107,11 +107,31 @@ class AutoTrader:
 
                     pair.ratio = from_coin_price / to_coin_price
 
+    def scout_tick(self):
+        """
+        Run scout and hooks
+        """
+        self.pre_scout()
+        self.scout()
+        self.post_scout()
+
+    def pre_scout(self):
+        """
+        Hook before scouting
+        """
+        pass
+
     def scout(self):
         """
         Scout for potential jumps from the current coin to another coin
         """
         raise NotImplementedError()
+
+    def post_scout(self):
+        """
+        Hook after scouting
+        """
+        pass
 
     def _get_ratios(self, coin: Coin, coin_price, excluded_coins: List[Coin] = []):
         """
