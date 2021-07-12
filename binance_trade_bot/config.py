@@ -35,6 +35,9 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
             "sell_max_price_change": "0.005",
             "buy_max_price_change": "0.005",
             "price_type": self.PRICE_TYPE_ORDERBOOK,
+            "enable_stop_loss": "false",
+            "stop_loss_percentage": "5.0",
+            "stop_loss_ban_duration": "60.0",
             "accept_losses": "false",
             "max_idle_hours": "3",
             "ratio_adjust_weight":"100"
@@ -143,6 +146,11 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
         if price_type not in price_types:
             raise Exception(f"{self.PRICE_TYPE_ORDERBOOK} or {self.PRICE_TYPE_TICKER} expected, got {price_type} for price_type")
         self.PRICE_TYPE = price_type
+
+        enable_stop_loss_str = os.environ.get("ENABLE_STOP_LOSS") or config.get(USER_CFG_SECTION, "enable_stop_loss")
+        self.ENABLE_STOP_LOSS = enable_stop_loss_str == 'true' or enable_stop_loss_str == 'True'
+        self.STOP_LOSS_PERCENTAGE = float(os.environ.get("STOP_LOSS_PERCENTAGE") or config.get(USER_CFG_SECTION, "stop_loss_percentage"))        
+        self.STOP_LOSS_BAN_DURATION = float(os.environ.get("STOP_LOSS_BAN_DURATION") or config.get(USER_CFG_SECTION, "stop_loss_ban_duration"))
 
         accept_losses_str = os.environ.get("ACCEPT_LOSSES") or config.get(USER_CFG_SECTION, "accept_losses")
         self.ACCEPT_LOSSES = accept_losses_str == 'true' or accept_losses_str == 'True'

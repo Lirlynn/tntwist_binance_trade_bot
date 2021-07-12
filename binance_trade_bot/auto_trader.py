@@ -126,34 +126,36 @@ class AutoTrader:
         """
         Hook before scouting
         """
-        current_coin = self.db.get_current_coin()
-        if current_coin is None:
-            return
-        
-        for symbol in list(self.banned_symbols_resumes.keys()):
-            if self.banned_symbols_resumes[symbol] > self.manager.now():
-                self.banned_symbols.remove(symbol)
-                self.banned_symbols_resumes.pop(symbol, None)
-                self.logger.info(f"Removed {symbol} from banned list.")
 
-        current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
-        if current_coin_sell_price is None or self.buy_price is None:
-            return
-        
-        price_change = 100*(current_coin_sell_price / self.buy_price) - 100
-        if price_change <= -5.0:
-            is_on_bridge = self.is_on_bridge(current_coin.symbol, current_coin_sell_price)
-            if is_on_bridge == False:
-                self.logger.info(f"Stop loss triggered! Price change is {round(price_change, 2)}%. Going to sell current current coin.")
-                sell_order = None
-                while sell_order is None:
-                    current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
-                    sell_order = self.manager.sell_alt(current_coin, self.config.BRIDGE, current_coin_sell_price)
-                self.banned_symbols.append(current_coin.symbol)
-                ban_till = self.manager.now() + timedelta(minutes=60)
-                self.banned_symbols_resumes[current_coin.symbol] = ban_till
-                self.logger.info(f"Banned {current_coin.symbol} till {ban_till}.")
-                self.bridge_scout()
+        if self.config.ENABLE_PAPER_TRADING:
+            current_coin = self.db.get_current_coin()
+            if current_coin is None:
+                return
+            
+            for symbol in list(self.banned_symbols_resumes.keys()):
+                if self.banned_symbols_resumes[symbol] > self.manager.now():
+                    self.banned_symbols.remove(symbol)
+                    self.banned_symbols_resumes.pop(symbol, None)
+                    self.logger.info(f"Removed {symbol} from banned list.")
+
+            current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
+            if current_coin_sell_price is None or self.buy_price is None:
+                return
+            
+            price_change = 100*(current_coin_sell_price / self.buy_price) - 100
+            if price_change <= -1 * self.config.STOP_LOSS_PERCENTAGE:
+                is_on_bridge = self.is_on_bridge(current_coin.symbol, current_coin_sell_price)
+                if is_on_bridge == False:
+                    self.logger.info(f"Stop loss triggered! Price change is {round(price_change, 2)}%. Going to sell current current coin.")
+                    sell_order = None
+                    while sell_order is None:
+                        current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
+                        sell_order = self.manager.sell_alt(current_coin, self.config.BRIDGE, current_coin_sell_price)
+                    self.banned_symbols.append(current_coin.symbol)
+                    ban_till = self.manager.now() + timedelta(minutes=self.config.STOP_LOSS_BAN_DURATION)
+                    self.banned_symbols_resumes[current_coin.symbol] = ban_till
+                    self.logger.info(f"Banned {current_coin.symbol} till {ban_till}.")
+                    self.bridge_scout()
         
 
     def scout(self):
