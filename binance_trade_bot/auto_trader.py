@@ -1,5 +1,6 @@
+from binance_trade_bot.models import current_coin
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 from sqlalchemy.orm import Session
@@ -18,6 +19,9 @@ class AutoTrader:
         self.logger = logger
         self.config = config
         self.failed_buy_order = False
+        self.buy_price = None
+        self.banned_symbols = []
+        self.banned_symbols_resumes = {}
 
     def initialize(self):
         self.initialize_trade_thresholds()
@@ -40,6 +44,8 @@ class AutoTrader:
             self.logger.info("Couldn't sell, going back to scouting mode...")
             return None
 
+        self.buy_price = None
+
         result = self.manager.buy_alt(pair.to_coin, self.config.BRIDGE, buy_price)
         if result is not None:
             self.db.set_current_coin(pair.to_coin)
@@ -49,6 +55,7 @@ class AutoTrader:
 
             self.update_trade_threshold(pair.to_coin, price)
             self.failed_buy_order = False
+            self.buy_price = price
             return result
 
         self.logger.info("Couldn't buy, going back to scouting mode...")
@@ -119,7 +126,35 @@ class AutoTrader:
         """
         Hook before scouting
         """
-        pass
+        current_coin = self.db.get_current_coin()
+        if current_coin is None:
+            return
+        
+        for symbol in list(self.banned_symbols_resumes.keys()):
+            if self.banned_symbols_resumes[symbol] > self.manager.now():
+                self.banned_symbols.remove(symbol)
+                self.banned_symbols_resumes.pop(symbol, None)
+                self.logger.info(f"Removed {symbol} from banned list.")
+
+        current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
+        if current_coin_sell_price is None or self.buy_price is None:
+            return
+        
+        price_change = 100*(current_coin_sell_price / self.buy_price) - 100
+        if price_change <= -5.0:
+            is_on_bridge = self.is_on_bridge(current_coin.symbol, current_coin_sell_price)
+            if is_on_bridge == False:
+                self.logger.info(f"Stop loss triggered! Price change is {round(price_change, 2)}%. Going to sell current current coin.")
+                sell_order = None
+                while sell_order is None:
+                    current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
+                    sell_order = self.manager.sell_alt(current_coin, self.config.BRIDGE, current_coin_sell_price)
+                self.banned_symbols.append(current_coin.symbol)
+                ban_till = self.manager.now() + timedelta(minutes=60)
+                self.banned_symbols_resumes[current_coin.symbol] = ban_till
+                self.logger.info(f"Banned {current_coin.symbol} till {ban_till}.")
+                self.bridge_scout()
+        
 
     def scout(self):
         """
@@ -133,6 +168,14 @@ class AutoTrader:
         """
         pass
 
+    def is_on_bridge(self, coin_symbol, sell_price):
+        current_balance = self.manager.get_currency_balance(coin_symbol)       
+
+        if current_balance and current_balance * sell_price >= self.manager.get_min_notional(coin_symbol, self.config.BRIDGE.symbol):
+            return False
+
+        return True
+
     def _get_ratios(self, coin: Coin, coin_price, excluded_coins: List[Coin] = []):
         """
         Given a coin, get the current price ratio for every other enabled coin
@@ -143,8 +186,8 @@ class AutoTrader:
         scout_logs = []
         excluded_coin_symbols = [c.symbol for c in excluded_coins]
         for pair in self.db.get_pairs_from(coin):
-            #skip excluded coins
-            if pair.to_coin.symbol in excluded_coin_symbols:
+            #skip excluded or banned coins
+            if pair.to_coin.symbol in excluded_coin_symbols or pair.to_coin.symbol in self.banned_symbols:
                 continue
 
             optional_coin_price = self.manager.get_buy_price(pair.to_coin + self.config.BRIDGE)
@@ -193,6 +236,10 @@ class AutoTrader:
         bridge_balance = self.manager.get_currency_balance(self.config.BRIDGE.symbol)
 
         for coin in self.db.get_coins():
+            #skip excluded or banned coins
+            if coin.symbol in self.banned_symbols:
+                continue
+
             current_coin_price = self.manager.get_sell_price(coin + self.config.BRIDGE)
 
             if current_coin_price is None:
@@ -209,9 +256,13 @@ class AutoTrader:
                     if result is not None:
                         self.db.set_current_coin(coin)
                         self.failed_buy_order = False
+                        price = result.price
+                        if abs(price) < 1e-15:
+                            price = result.cumulative_quote_qty / result.cumulative_filled_quantity
+                        self.buy_price = price
                         return coin
-                    else:
-                        self.failed_buy_order = True
+
+        self.failed_buy_order = True
         return None
 
     def update_values(self):
