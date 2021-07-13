@@ -16,6 +16,9 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
     PRICE_TYPE_ORDERBOOK = "orderbook"
     PRICE_TYPE_TICKER = "ticker"
 
+    STOP_LOSS_PRICE_BUY = "buy"
+    STOP_LOSS_PRICE_MAX = "max"
+
     def __init__(self):
         # Init config
         config = configparser.ConfigParser()
@@ -36,6 +39,7 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
             "buy_max_price_change": "0.005",
             "price_type": self.PRICE_TYPE_ORDERBOOK,
             "enable_stop_loss": "false",
+            "stop_loss_price": self.STOP_LOSS_PRICE_BUY,
             "stop_loss_percentage": "5.0",
             "stop_loss_ban_duration": "60.0",
             "accept_losses": "false",
@@ -149,6 +153,22 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
 
         enable_stop_loss_str = os.environ.get("ENABLE_STOP_LOSS") or config.get(USER_CFG_SECTION, "enable_stop_loss")
         self.ENABLE_STOP_LOSS = enable_stop_loss_str == 'true' or enable_stop_loss_str == 'True'
+        
+        stop_loss_prices = {
+            self.STOP_LOSS_PRICE_BUY,
+            self.STOP_LOSS_PRICE_MAX
+        }
+
+        stop_loss_price = os.environ.get("STOP_LOSS_PRICE") or config.get(
+            USER_CFG_SECTION, "stop_loss_price", fallback=self.STOP_LOSS_PRICE_BUY
+        )
+        if stop_loss_price not in stop_loss_prices:
+            raise Exception(
+                f"{self.STOP_LOSS_PRICE_BUY} or {self.STOP_LOSS_PRICE_MAX} expected, got {stop_loss_price}"
+                "for stop_loss_price"
+            )        
+        self.STOP_LOSS_PRICE = stop_loss_price
+
         self.STOP_LOSS_PERCENTAGE = float(os.environ.get("STOP_LOSS_PERCENTAGE") or config.get(USER_CFG_SECTION, "stop_loss_percentage"))        
         self.STOP_LOSS_BAN_DURATION = float(os.environ.get("STOP_LOSS_BAN_DURATION") or config.get(USER_CFG_SECTION, "stop_loss_ban_duration"))
 

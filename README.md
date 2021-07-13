@@ -70,6 +70,7 @@ Create a .cfg file named `user.cfg` based off `.user.cfg.example`, then add your
 -   **buy_max_price_change/sell_max_price_change** - Controls how much price change in decimal percentage is accepted between calculation of ratios and trading.
 -   **price_type** - Controls the type of prices used by the bot, types available: orderbook, ticker (default=orderbook). Please note that using the orderbook prices increase the CPU usage.
 -   **enable_stop_loss** - Enables stop loss functionalities. Default is false
+-   **stop_loss_price** - Controls which price to use for stop loss calculaction. Prices available: buy, max
 -   **stop_loss_percentage** - Controls the percentage of loss when stop loss is triggered and current coin is sold. Default is 5.0
 -   **stop_loss_ban_duration** - Controls the ban duration in minutes of the current coin when a stop loss sell is triggered. Default is 60.0
 -   **accept_losses** - Needs to be set to true for highly risky and gamling strategies. Otherwise the bot wont start.

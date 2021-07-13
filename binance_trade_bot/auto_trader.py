@@ -20,6 +20,7 @@ class AutoTrader:
         self.config = config
         self.failed_buy_order = False
         self.buy_price = None
+        self.max_price = None
         self.banned_symbols = []
         self.banned_symbols_resumes = {}
 
@@ -45,6 +46,7 @@ class AutoTrader:
             return None
 
         self.buy_price = None
+        self.max_price = None
 
         result = self.manager.buy_alt(pair.to_coin, self.config.BRIDGE, buy_price)
         if result is not None:
@@ -56,6 +58,7 @@ class AutoTrader:
             self.update_trade_threshold(pair.to_coin, price)
             self.failed_buy_order = False
             self.buy_price = price
+            self.max_price = price
             return result
 
         self.logger.info("Couldn't buy, going back to scouting mode...")
@@ -127,7 +130,7 @@ class AutoTrader:
         Hook before scouting
         """
 
-        if self.config.ENABLE_PAPER_TRADING:
+        if self.config.ENABLE_STOP_LOSS:
             current_coin = self.db.get_current_coin()
             if current_coin is None:
                 return
@@ -141,8 +144,15 @@ class AutoTrader:
             current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
             if current_coin_sell_price is None or self.buy_price is None:
                 return
+
+            if current_coin_sell_price > self.max_price:
+                self.max_price = current_coin_sell_price
+
+            price_base = self.buy_price
+            if self.config.STOP_LOSS_PRICE == self.config.STOP_LOSS_PRICE_MAX:
+                price_base = self.max_price
             
-            price_change = 100*(current_coin_sell_price / self.buy_price) - 100
+            price_change = 100*(current_coin_sell_price / price_base) - 100
             if price_change <= -1 * self.config.STOP_LOSS_PERCENTAGE:
                 is_on_bridge = self.is_on_bridge(current_coin.symbol, current_coin_sell_price)
                 if is_on_bridge == False:
@@ -151,6 +161,8 @@ class AutoTrader:
                     while sell_order is None:
                         current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
                         sell_order = self.manager.sell_alt(current_coin, self.config.BRIDGE, current_coin_sell_price)
+                    self.buy_price = None
+                    self.max_price = None
                     self.banned_symbols.append(current_coin.symbol)
                     ban_till = self.manager.now() + timedelta(minutes=self.config.STOP_LOSS_BAN_DURATION)
                     self.banned_symbols_resumes[current_coin.symbol] = ban_till
@@ -262,6 +274,7 @@ class AutoTrader:
                         if abs(price) < 1e-15:
                             price = result.cumulative_quote_qty / result.cumulative_filled_quantity
                         self.buy_price = price
+                        self.max_price = price
                         return coin
 
         self.failed_buy_order = True
