@@ -133,7 +133,7 @@ class AutoTrader:
                 return
             
             for symbol in list(self.banned_symbols_resumes.keys()):
-                if self.banned_symbols_resumes[symbol] > self.manager.now():
+                if self.banned_symbols_resumes[symbol] < self.manager.now():
                     self.banned_symbols.remove(symbol)
                     self.banned_symbols_resumes.pop(symbol, None)
                     self.logger.info(f"Removed {symbol} from banned list.")
