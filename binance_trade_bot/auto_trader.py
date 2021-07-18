@@ -117,19 +117,7 @@ class AutoTrader:
 
                     pair.ratio = from_coin_price / to_coin_price
 
-    def scout_tick(self):
-        """
-        Run scout and hooks
-        """
-        self.pre_scout()
-        self.scout()
-        self.post_scout()
-
-    def pre_scout(self):
-        """
-        Hook before scouting
-        """
-
+    def process_stop_loss(self):
         if self.config.ENABLE_STOP_LOSS:
             current_coin = self.db.get_current_coin()
             if current_coin is None:
@@ -154,7 +142,7 @@ class AutoTrader:
                         .first()
                     if last_trade != None:
                         self.buy_price = last_trade.crypto_trade_amount / last_trade.alt_trade_amount
-                        self.logger.info(f"Buy price for current coin from trade history: {self.buy_price}{self.config.BRIDGE_SYMBOL}")
+                        self.logger.info(f"Buy price for current coin from trade history: {self.buy_price} {self.config.BRIDGE_SYMBOL}")
                         self.max_price = self.buy_price #TODO: Store max_price somewhere
 
             if self.buy_price is None:
@@ -184,6 +172,19 @@ class AutoTrader:
                     self.logger.info(f"Banned {current_coin.symbol} till {ban_till}.")
                     self.bridge_scout()
         
+    def scout_tick(self):
+        """
+        Run scout and hooks
+        """
+        self.pre_scout()
+        self.scout()
+        self.post_scout()
+
+    def pre_scout(self):
+        """
+        Hook before scouting
+        """
+        self.process_stop_loss()       
 
     def scout(self):
         """
