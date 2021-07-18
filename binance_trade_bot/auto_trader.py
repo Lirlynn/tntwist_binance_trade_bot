@@ -1,15 +1,15 @@
-from binance_trade_bot.models import current_coin
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List
 
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import false
 
 from .binance_api_manager import BinanceAPIManager
 from .config import Config
 from .database import Database, LogScout
 from .logger import Logger
-from .models import Coin, CoinValue, Pair
+from .models import Coin, CoinValue, Pair, Trade
 
 
 class AutoTrader:
@@ -142,7 +142,22 @@ class AutoTrader:
                     self.logger.info(f"Removed {symbol} from banned list.")
 
             current_coin_sell_price = self.manager.get_sell_price(current_coin.symbol + self.config.BRIDGE_SYMBOL)
-            if current_coin_sell_price is None or self.buy_price is None:
+            if current_coin_sell_price is None:
+                return
+
+            if self.buy_price is None:
+                self.logger.info(f"Buy price for current coin not found. Loading from trade history...")
+                with self.db.db_session() as session:
+                    last_trade = session.query(Trade)\
+                        .filter(Trade.alt_coin_id == current_coin.symbol, Trade.selling == false)\
+                        .order_by(Trade.datetime.desc())\
+                        .first()
+                    if last_trade != None:
+                        self.buy_price = last_trade.alt_trade_amount / last_trade.crypto_trade_amount
+                        self.logger.info(f"Buy price for current coin from trade history: {self.buy_price}{self.config.BRIDGE_SYMBOL}")
+                        self.max_price = self.buy_price #TODO: Store max_price somewhere
+
+            if self.buy_price is None:
                 return
 
             if current_coin_sell_price > self.max_price:
