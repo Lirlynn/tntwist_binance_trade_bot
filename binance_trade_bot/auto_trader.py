@@ -153,7 +153,7 @@ class AutoTrader:
                         .order_by(Trade.datetime.desc())\
                         .first()
                     if last_trade != None:
-                        self.buy_price = last_trade.alt_trade_amount / last_trade.crypto_trade_amount
+                        self.buy_price = last_trade.crypto_trade_amount / last_trade.alt_trade_amount
                         self.logger.info(f"Buy price for current coin from trade history: {self.buy_price}{self.config.BRIDGE_SYMBOL}")
                         self.max_price = self.buy_price #TODO: Store max_price somewhere
 
