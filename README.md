@@ -69,6 +69,7 @@ Create a .cfg file named `user.cfg` based off `.user.cfg.example`, then add your
 -   **sell_order_type** - Controls the type of placed sell orders, types available: market, limit (default=market)
 -   **buy_max_price_change/sell_max_price_change** - Controls how much price change in decimal percentage is accepted between calculation of ratios and trading.
 -   **price_type** - Controls the type of prices used by the bot, types available: orderbook, ticker (default=orderbook). Please note that using the orderbook prices increase the CPU usage.
+-   **ratio_calc** - Controls the calculation for ratios between coins. Options available: Default, Bamooxa
 -   **enable_stop_loss** - Enables stop loss functionalities. Default is false
 -   **stop_loss_price** - Controls which price to use for stop loss calculaction. Prices available: buy, max
 -   **stop_loss_percentage** - Controls the percentage of loss when stop loss is triggered and current coin is sold. Default is 5.0

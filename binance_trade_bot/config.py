@@ -19,6 +19,9 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
     STOP_LOSS_PRICE_BUY = "buy"
     STOP_LOSS_PRICE_MAX = "max"
 
+    RATIO_CALC_DEFAULT = "default"
+    RATIO_CALC_BAMOOXA = "bamooxa"
+
     def __init__(self):
         # Init config
         config = configparser.ConfigParser()
@@ -38,6 +41,7 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
             "sell_max_price_change": "0.005",
             "buy_max_price_change": "0.005",
             "price_type": self.PRICE_TYPE_ORDERBOOK,
+            "ratio_calc": "default",
             "enable_stop_loss": "false",
             "stop_loss_price": self.STOP_LOSS_PRICE_BUY,
             "stop_loss_percentage": "5.0",
@@ -152,6 +156,21 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
         if price_type not in price_types:
             raise Exception(f"{self.PRICE_TYPE_ORDERBOOK} or {self.PRICE_TYPE_TICKER} expected, got {price_type} for price_type")
         self.PRICE_TYPE = price_type
+
+        ratio_calcs = {
+            self.RATIO_CALC_DEFAULT,
+            self.RATIO_CALC_BAMOOXA
+        }
+
+        ratio_calc = os.environ.get("RATIO_CALC") or config.get(
+            USER_CFG_SECTION, "ratio_calc", fallback=self.RATIO_CALC_DEFAULT
+        )
+        if ratio_calc not in ratio_calcs:
+            raise Exception(
+                f"{self.RATIO_CALC_DEFAULT} or {self.RATIO_CALC_BAMOOXA} expected, got {ratio_calc}"
+                "for ratio_calc"
+            )
+        self.RATIO_CALC = ratio_calc
 
         enable_stop_loss_str = os.environ.get("ENABLE_STOP_LOSS") or config.get(USER_CFG_SECTION, "enable_stop_loss")
         self.ENABLE_STOP_LOSS = enable_stop_loss_str == 'true' or enable_stop_loss_str == 'True'
