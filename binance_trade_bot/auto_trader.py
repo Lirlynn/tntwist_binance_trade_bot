@@ -149,7 +149,7 @@ class AutoTrader:
                 self.logger.info(f"Buy price for current coin not found. Loading from trade history...")
                 with self.db.db_session() as session:
                     last_trade = session.query(Trade)\
-                        .filter(Trade.alt_coin_id == current_coin.symbol, Trade.selling == false)\
+                        .filter(Trade.alt_coin_id == current_coin.symbol, Trade.selling == False)\
                         .order_by(Trade.datetime.desc())\
                         .first()
                     if last_trade != None:
