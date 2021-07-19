@@ -38,6 +38,15 @@ def main():
     else:
         logger.warning("RUNNING IN REAL TRADING MODE")
 
+    if config.ENABLE_STOP_LOSS:
+        logger.info(f"Stop loss enabled. Stop loss triggers when {config.STOP_LOSS_PRICE} price of current coin changes by -{config.STOP_LOSS_PERCENTAGE}%")
+
+    if config.RATIO_CALC != config.RATIO_CALC_DEFAULT:
+        logger.info(f"Using {config.RATIO_CALC} method for caluclation of the ratios.")
+
+    if config.AUTO_ADJUST_BNB_BALANCE:
+        logger.info(f"Auto adjust for BNB enabled.")
+
     logger.info(f"Buy type: {config.BUY_ORDER_TYPE}, Sell type: {config.SELL_ORDER_TYPE}")
     logger.info(f"Max price changes for buys: {config.BUY_MAX_PRICE_CHANGE}, Max price changes for sells: {config.SELL_MAX_PRICE_CHANGE}")
     logger.info(f"Using {config.PRICE_TYPE} prices")
@@ -51,7 +60,7 @@ def main():
     trader.initialize()
 
     schedule = SafeScheduler(logger)
-    schedule.every(config.SCOUT_SLEEP_TIME).seconds.do(trader.scout).tag("scouting")
+    schedule.every(config.SCOUT_SLEEP_TIME).seconds.do(trader.scout_tick).tag("scouting")
     schedule.every(1).minutes.do(trader.update_values).tag("updating value history")
     schedule.every(1).minutes.do(db.prune_scout_history).tag("pruning scout history")
     schedule.every(1).hours.do(db.prune_value_history).tag("pruning value history")

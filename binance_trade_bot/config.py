@@ -16,6 +16,12 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
     PRICE_TYPE_ORDERBOOK = "orderbook"
     PRICE_TYPE_TICKER = "ticker"
 
+    STOP_LOSS_PRICE_BUY = "buy"
+    STOP_LOSS_PRICE_MAX = "max"
+
+    RATIO_CALC_DEFAULT = "default"
+    RATIO_CALC_BAMOOXA = "bamooxa"
+
     def __init__(self):
         # Init config
         config = configparser.ConfigParser()
@@ -35,9 +41,16 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
             "sell_max_price_change": "0.005",
             "buy_max_price_change": "0.005",
             "price_type": self.PRICE_TYPE_ORDERBOOK,
+            "ratio_calc": "default",
+            "enable_stop_loss": "false",
+            "stop_loss_price": self.STOP_LOSS_PRICE_BUY,
+            "stop_loss_percentage": "5.0",
+            "stop_loss_ban_duration": "60.0",
             "accept_losses": "false",
             "max_idle_hours": "3",
-            "ratio_adjust_weight":"100"
+            "ratio_adjust_weight":"100",
+            "auto_adjust_bnb_balance": "false",
+            "auto_adjust_bnb_balance_rate": "3",
         }
 
         if not os.path.exists(CFG_FL_NAME):
@@ -144,7 +157,50 @@ class Config:  # pylint: disable=too-few-public-methods,too-many-instance-attrib
             raise Exception(f"{self.PRICE_TYPE_ORDERBOOK} or {self.PRICE_TYPE_TICKER} expected, got {price_type} for price_type")
         self.PRICE_TYPE = price_type
 
+        ratio_calcs = {
+            self.RATIO_CALC_DEFAULT,
+            self.RATIO_CALC_BAMOOXA
+        }
+
+        ratio_calc = os.environ.get("RATIO_CALC") or config.get(
+            USER_CFG_SECTION, "ratio_calc", fallback=self.RATIO_CALC_DEFAULT
+        )
+        if ratio_calc not in ratio_calcs:
+            raise Exception(
+                f"{self.RATIO_CALC_DEFAULT} or {self.RATIO_CALC_BAMOOXA} expected, got {ratio_calc}"
+                "for ratio_calc"
+            )
+        self.RATIO_CALC = ratio_calc
+
+        enable_stop_loss_str = os.environ.get("ENABLE_STOP_LOSS") or config.get(USER_CFG_SECTION, "enable_stop_loss")
+        self.ENABLE_STOP_LOSS = enable_stop_loss_str == 'true' or enable_stop_loss_str == 'True'
+        
+        stop_loss_prices = {
+            self.STOP_LOSS_PRICE_BUY,
+            self.STOP_LOSS_PRICE_MAX
+        }
+
+        stop_loss_price = os.environ.get("STOP_LOSS_PRICE") or config.get(
+            USER_CFG_SECTION, "stop_loss_price", fallback=self.STOP_LOSS_PRICE_BUY
+        )
+        if stop_loss_price not in stop_loss_prices:
+            raise Exception(
+                f"{self.STOP_LOSS_PRICE_BUY} or {self.STOP_LOSS_PRICE_MAX} expected, got {stop_loss_price}"
+                "for stop_loss_price"
+            )        
+        self.STOP_LOSS_PRICE = stop_loss_price
+
+        self.STOP_LOSS_PERCENTAGE = float(os.environ.get("STOP_LOSS_PERCENTAGE") or config.get(USER_CFG_SECTION, "stop_loss_percentage"))        
+        self.STOP_LOSS_BAN_DURATION = float(os.environ.get("STOP_LOSS_BAN_DURATION") or config.get(USER_CFG_SECTION, "stop_loss_ban_duration"))
+
         accept_losses_str = os.environ.get("ACCEPT_LOSSES") or config.get(USER_CFG_SECTION, "accept_losses")
         self.ACCEPT_LOSSES = accept_losses_str == 'true' or accept_losses_str == 'True'
 
         self.MAX_IDLE_HOURS = os.environ.get("MAX_IDLE_HOURS") or config.get(USER_CFG_SECTION, "max_idle_hours")
+
+        auto_adjust_bnb_balance_str = os.environ.get("AUTO_ADJUST_BNB_BALANCE") or config.get(USER_CFG_SECTION, "auto_adjust_bnb_balance")
+        self.AUTO_ADJUST_BNB_BALANCE = str(auto_adjust_bnb_balance_str).lower() == "true"
+
+        self.AUTO_ADJUST_BNB_BALANCE_RATE = float(
+            os.environ.get("AUTO_ADJUST_BNB_BALANCE_RATE") or config.get(USER_CFG_SECTION, "auto_adjust_bnb_balance_rate")
+        )

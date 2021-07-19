@@ -248,7 +248,7 @@ def backtest(
     try:
         while manager.datetime < end_date:
             try:
-                trader.scout()
+                trader.scout_tick()
             except Exception:  # pylint: disable=broad-except
                 logger.warning(format_exc())
             manager.increment(interval)
